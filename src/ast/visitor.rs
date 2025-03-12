@@ -17,8 +17,12 @@
 
 //! Recursive visitors for ast Nodes. See [`Visitor`] for more details.
 
-use crate::ast::{Expr, ObjectName, Query, Statement, TableFactor, Value};
+use crate::ast::{
+    Expr, Function, GroupByExpr, ObjectName, OrderBy, Query, SelectItem, Statement, TableFactor,
+    Value,
+};
 use core::ops::ControlFlow;
+use sqlparser::ast::Ident;
 
 /// A type that can be visited by a [`Visitor`]. See [`Visitor`] for
 /// recursively visiting parsed SQL statements.
@@ -243,6 +247,66 @@ pub trait Visitor {
     fn post_visit_value(&mut self, _value: &Value) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
+
+    /// Invoked for any Identifier that appear in the AST before visiting children
+    fn pre_visit_ident(&mut self, _ident: &Ident) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Identifier that appear in the AST after visiting children
+    fn post_visit_ident(&mut self, _ident: &Ident) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any functions that appear in the AST before visiting children
+    fn pre_visit_function(&mut self, _function: &Function) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any functions that appear in the AST after visiting children
+    fn post_visit_function(&mut self, _function: &Function) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any SelectItem that appear in the AST before visiting children
+    fn pre_visit_select_item(&mut self, _select_item: &SelectItem) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any SelectItem that appear in the AST after visiting children
+    fn post_visit_select_item(&mut self, _select_item: &SelectItem) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for Where Expr that appear in the AST before visiting children
+    fn pre_visit_where(&mut self, _where: &Expr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for Where Expr that appear in the AST after visiting children
+    fn post_visit_where(&mut self, _where: &Expr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any GroupBy Expr that appear in the AST before visiting children
+    fn pre_visit_group_by_expr(&mut self, _group_by: &GroupByExpr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any GroupBy Expr that appear in the AST after visiting children
+    fn post_visit_group_by_expr(&mut self, _group_by: &GroupByExpr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any OrderBy Expr that appear in the AST before visiting children
+    fn pre_visit_order_by(&mut self, _order_by: &OrderBy) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any OrderBy Expr that appear in the AST after visiting children
+    fn post_visit_order_by(&mut self, _order_by: &OrderBy) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
 }
 
 /// A visitor that can be used to mutate an AST tree.
@@ -355,6 +419,62 @@ pub trait VisitorMut {
 
     /// Invoked for any statements that appear in the AST after visiting children
     fn post_visit_value(&mut self, _value: &mut Value) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any functions that appear in the AST before visiting children
+    fn pre_visit_function(&mut self, _function: &mut Function) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any functions that appear in the AST after visiting children
+    fn post_visit_function(&mut self, _function: &mut Function) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any SelectItem that appear in the AST before visiting children
+    fn pre_visit_select_item(&mut self, _select_item: &mut SelectItem) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any SelectItem that appear in the AST after visiting children
+    fn post_visit_select_item(
+        &mut self,
+        _select_item: &mut SelectItem,
+    ) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for Where Expr that appear in the AST before visiting children
+    fn pre_visit_where(&mut self, _where: &mut Expr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for Where Expr that appear in the AST after visiting children
+    fn post_visit_where(&mut self, _where: &mut Expr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any GroupBy Expr that appear in the AST before visiting children
+    fn pre_visit_group_by_expr(&mut self, _group_by: &mut GroupByExpr) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any GroupBy Expr that appear in the AST after visiting children
+    fn post_visit_group_by_expr(
+        &mut self,
+        _group_by: &mut GroupByExpr,
+    ) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any OrderBy Expr that appear in the AST before visiting children
+    fn pre_visit_order_by(&mut self, _order_by: &mut OrderBy) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any OrderBy Expr that appear in the AST after visiting children
+    fn post_visit_order_by(&mut self, _order_by: &mut OrderBy) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
 }
