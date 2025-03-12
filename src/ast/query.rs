@@ -294,6 +294,7 @@ pub enum SelectFlavor {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_select"))]
 pub struct Select {
     /// Token for the `SELECT` keyword
     pub select_token: AttachedToken,
@@ -304,6 +305,7 @@ pub struct Select {
     /// Whether the top was located before `ALL`/`DISTINCT`
     pub top_before_distinct: bool,
     /// projection expressions
+    #[cfg_attr(feature = "visitor", visit(with = "visit_projection"))]
     pub projection: Vec<SelectItem>,
     /// INTO
     pub into: Option<SelectInto>,
@@ -541,6 +543,7 @@ impl fmt::Display for NamedWindowDefinition {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_with"))]
 pub struct With {
     /// Token for the "WITH" keyword
     pub with_token: AttachedToken,
