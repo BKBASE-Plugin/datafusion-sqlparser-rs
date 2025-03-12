@@ -422,6 +422,16 @@ pub trait VisitorMut {
         ControlFlow::Continue(())
     }
 
+    /// Invoked for any Identifier that appear in the AST before visiting children
+    fn pre_visit_ident(&mut self, _ident: &mut Ident) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Identifier that appear in the AST after visiting children
+    fn post_visit_ident(&mut self, _ident: &mut Ident) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
     /// Invoked for any functions that appear in the AST before visiting children
     fn pre_visit_function(&mut self, _function: &mut Function) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
