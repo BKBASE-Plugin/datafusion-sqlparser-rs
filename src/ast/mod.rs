@@ -153,6 +153,7 @@ where
 #[derive(Debug, Clone, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_ident"))]
 pub struct Ident {
     /// The value of the identifier without quotes.
     pub value: String,
@@ -6305,6 +6306,7 @@ impl fmt::Display for CloseCursor {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_function"))]
 pub struct Function {
     pub name: ObjectName,
     /// Flags whether this function call uses the [ODBC syntax].

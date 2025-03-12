@@ -317,6 +317,7 @@ pub struct Select {
     /// [ClickHouse](https://clickhouse.com/docs/en/sql-reference/statements/select/prewhere)
     pub prewhere: Option<Expr>,
     /// WHERE
+    #[cfg_attr(feature = "visitor", visit(with = "visit_where"))]
     pub selection: Option<Expr>,
     /// GROUP BY
     pub group_by: GroupByExpr,
@@ -629,6 +630,7 @@ pub enum SelectItemQualifiedWildcardKind {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_select_item"))]
 pub enum SelectItem {
     /// Any expression, not followed by `[ AS ] alias`
     UnnamedExpr(Expr),
@@ -2235,6 +2237,7 @@ pub enum OrderByKind {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_order_by"))]
 pub struct OrderBy {
     pub kind: OrderByKind,
 
@@ -2626,6 +2629,7 @@ impl fmt::Display for GroupByWithModifier {
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+#[cfg_attr(feature = "visitor", visit(with = "visit_group_by_expr"))]
 pub enum GroupByExpr {
     /// ALL syntax of [Snowflake], [DuckDB] and [ClickHouse].
     ///
