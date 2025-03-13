@@ -18,8 +18,8 @@
 //! Recursive visitors for ast Nodes. See [`Visitor`] for more details.
 
 use crate::ast::{
-    Expr, Function, GroupByExpr, ObjectName, OrderBy, Query, SelectItem, Statement, TableFactor,
-    Value,
+    Expr, Function, GroupByExpr, ObjectName, OrderBy, Query, Select, SelectItem, Statement,
+    TableFactor, Value, With,
 };
 use core::ops::ControlFlow;
 use sqlparser::ast::Ident;
@@ -307,6 +307,36 @@ pub trait Visitor {
     fn post_visit_order_by(&mut self, _order_by: &OrderBy) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
+
+    /// Invoked for any Select that appear in the AST before visiting children
+    fn pre_visit_select(&mut self, _select: &Select) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Select that appear in the AST after visiting children
+    fn post_visit_select(&mut self, _select: &Select) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any With that appear in the AST before visiting children
+    fn pre_visit_with(&mut self, _select: &With) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any With that appear in the AST after visiting children
+    fn post_visit_with(&mut self, _select: &With) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Projection that appear in the AST before visiting children
+    fn pre_visit_projection(&mut self, _select: &Vec<SelectItem>) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Projection that appear in the AST after visiting children
+    fn post_visit_projection(&mut self, _select: &Vec<SelectItem>) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
 }
 
 /// A visitor that can be used to mutate an AST tree.
@@ -485,6 +515,36 @@ pub trait VisitorMut {
 
     /// Invoked for any OrderBy Expr that appear in the AST after visiting children
     fn post_visit_order_by(&mut self, _order_by: &mut OrderBy) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Select Expr that appear in the AST before visiting children
+    fn pre_visit_select(&mut self, _select: &mut Select) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Select Expr that appear in the AST after visiting children
+    fn post_visit_select(&mut self, _select: &mut Select) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any With Expr that appear in the AST before visiting children
+    fn pre_visit_with(&mut self, _select: &mut With) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any With Expr that appear in the AST after visiting children
+    fn post_visit_with(&mut self, _select: &mut With) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Projection that appear in the AST before visiting children
+    fn pre_visit_projection(&mut self, _select: &mut Vec<SelectItem>) -> ControlFlow<Self::Break> {
+        ControlFlow::Continue(())
+    }
+
+    /// Invoked for any Projection that appear in the AST after visiting children
+    fn post_visit_projection(&mut self, _select: &mut Vec<SelectItem>) -> ControlFlow<Self::Break> {
         ControlFlow::Continue(())
     }
 }
