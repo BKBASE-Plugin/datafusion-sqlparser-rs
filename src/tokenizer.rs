@@ -136,6 +136,18 @@ pub enum Token {
     DuckIntDiv,
     /// Modulo Operator `%`
     Mod,
+    /// MATCH_ALL
+    MatchAll,
+    /// MATCH_ANY
+    MatchAny,
+    /// MATCH_PHRASE
+    MatchPhrase,
+    /// MATCH_REGEX
+    MatchRegexp,
+    /// MATCH_PHRASE_PREFIX
+    MatchPhrasePrefix,
+    /// MATCH_PHRASE_EDGE
+    MatchPhraseEdge,
     /// String concatenation `||`
     StringConcat,
     /// Left parenthesis `(`
@@ -382,6 +394,12 @@ impl fmt::Display for Token {
             Token::QuestionAnd => write!(f, "?&"),
             Token::QuestionPipe => write!(f, "?|"),
             Token::CustomBinaryOperator(s) => f.write_str(s),
+            Token::MatchAll => write!(f, "MATCH_ALL"),
+            Token::MatchAny => write!(f, "MATCH_ANY"),
+            Token::MatchPhrase => write!(f, "MATCH_PHRASE"),
+            Token::MatchRegexp => write!(f, "MATCH_REGEXP"),
+            Token::MatchPhraseEdge => write!(f, "MATCH_PHRASE_EDGE"),
+            Token::MatchPhrasePrefix => write!(f, "MATCH_PHRASE_PREFIX"),
         }
     }
 }
@@ -3941,5 +3959,43 @@ mod tests {
                     }),
                 ],
             );
+    }
+
+    #[test]
+    fn test_doris_match_phrase_operator() {
+        let dialect = MySqlDialect {};
+
+        for symbol in [
+            "MATCH_ALL",
+            "MATCH_ANY",
+            "MATCH_PHRASE",
+            "MATCH_REGEXP",
+            "MATCH_PHRASE_PREFIX",
+            "MATCH_PHRASE_EDGE",
+        ] {
+            let sql = format!(
+                "SELECT * FROM table_name WHERE content {} 'keyword1 keyword2 ~3'",
+                symbol
+            );
+            let tokens = Tokenizer::new(&dialect, &sql).tokenize().unwrap();
+            let expected = vec![
+                Token::make_keyword("SELECT"),
+                Token::Whitespace(Whitespace::Space),
+                Token::Mul,
+                Token::Whitespace(Whitespace::Space),
+                Token::make_keyword("FROM"),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_word("table_name", None),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_keyword("WHERE"),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_word("content", None),
+                Token::Whitespace(Whitespace::Space),
+                Token::make_keyword(symbol),
+                Token::Whitespace(Whitespace::Space),
+                Token::SingleQuotedString("keyword1 keyword2 ~3".into()),
+            ];
+            compare(expected, tokens);
+        }
     }
 }

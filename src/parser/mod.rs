@@ -3227,6 +3227,21 @@ impl<'a> Parser<'a> {
                     self.expect_token(&Token::RParen)?;
                     Some(BinaryOperator::PGCustomBinaryOperator(idents))
                 }
+                // Doris match operators
+                Keyword::MATCH_ALL => dialect_is!(dialect is MySqlDialect | GenericDialect)
+                    .then_some(BinaryOperator::MatchAll),
+                Keyword::MATCH_ANY => dialect_is!(dialect is MySqlDialect | GenericDialect)
+                    .then_some(BinaryOperator::MatchAny),
+                Keyword::MATCH_PHRASE => dialect_is!(dialect is MySqlDialect | GenericDialect)
+                    .then_some(BinaryOperator::MatchPhrase),
+                Keyword::MATCH_PHRASE_PREFIX => {
+                    dialect_is!(dialect is MySqlDialect | GenericDialect)
+                        .then_some(BinaryOperator::MatchPhrasePrefix)
+                }
+                Keyword::MATCH_PHRASE_EDGE => dialect_is!(dialect is MySqlDialect | GenericDialect)
+                    .then_some(BinaryOperator::MatchPhraseEdge),
+                Keyword::MATCH_REGEXP => dialect_is!(dialect is MySqlDialect | GenericDialect)
+                    .then_some(BinaryOperator::MatchRegexp),
                 _ => None,
             },
             _ => None,
@@ -15422,5 +15437,68 @@ mod tests {
         let sql = r#"REPLACE"#;
 
         assert!(Parser::parse_sql(&MySqlDialect {}, sql).is_err());
+    }
+
+    #[test]
+    fn test_doris_match_operators() {
+        let dialect = &MySqlDialect {};
+
+        // Copy from https://doris.apache.org/docs/table-design/index/inverted-index
+        let test_cases = [
+            // 1.1
+            "SELECT * FROM table_name WHERE content MATCH_ANY 'keyword1';",
+            // 1.2
+            "SELECT * FROM table_name WHERE content MATCH_ANY 'keyword1 keyword2';",
+            // 1.3
+            "SELECT * FROM table_name WHERE content MATCH_ALL 'keyword1 keyword2';",
+            // 2.1
+            "SELECT * FROM table_name WHERE content MATCH_PHRASE 'keyword1 keyword2';",
+            // 2.2
+            "SELECT * FROM table_name WHERE content MATCH_PHRASE 'keyword1 keyword2 ~3';",
+            "SELECT * FROM table_name WHERE content MATCH_PHRASE 'keyword1 keyword2 ~3+';",
+            // 2.3
+            "SELECT * FROM table_name WHERE content MATCH_PHRASE_PREFIX 'keyword1 keyword2';",
+            // 2.4
+            "SELECT * FROM table_name WHERE content MATCH_PHRASE_PREFIX 'keyword1';",
+            // 2.5
+            "SELECT * FROM table_name WHERE content MATCH_REGEXP 'key*';",
+        ];
+
+        for sql in test_cases {
+            assert!(Parser::parse_sql(dialect, sql).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_doris_match_precedence() {
+        let dialect = &MySqlDialect {};
+        // Test sql with and, or, equal, like, between ... and operator
+        let sql = "SELECT 
+                id, 
+                title, 
+                content, 
+                score * 2 AS weighted_score
+            FROM 
+                documents 
+            WHERE 
+                content MATCH_ALL 'important concept theory' 
+                OR (
+                    author = 'Smith' AND content MATCH_ALL 'methodology approach'
+                ) 
+                AND (
+                    (references > 10 AND citations MATCH_ALL 'credible source') 
+                    OR (importance = 'high' AND content MATCH_ALL 'breakthrough discovery')
+                )
+                AND (
+                    (keywords LIKE '%analysis%' OR keywords MATCH_PHRASE 'evaluation')
+                    AND (abstract MATCH_ALL 'systematic review' OR conclusion LIKE '%finding%')
+                )
+                AND publication_date BETWEEN '2020-01-01' AND '2023-12-31'
+            ORDER BY 
+                weighted_score DESC, 
+                publication_date DESC
+            LIMIT 50";
+
+        assert!(Parser::parse_sql(dialect, sql).is_ok());
     }
 }

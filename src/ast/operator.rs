@@ -321,6 +321,15 @@ pub enum BinaryOperator {
     /// `~=` Same as? (PostgreSQL/Redshift geometric operator)
     /// See <https://www.postgresql.org/docs/9.5/functions-geometry.html>
     TildeEq,
+    /// Doris Match operator
+    /// See <https://doris.apache.org/zh-cn/docs/develop/sql-reference/operators/match/>
+    /// e.g. `a MATCH_* 'keyword1_xxxxxxx'`
+    MatchAll,
+    MatchAny,
+    MatchPhrase,
+    MatchPhrasePrefix,
+    MatchRegexp,
+    MatchPhraseEdge,
 }
 
 impl fmt::Display for BinaryOperator {
@@ -394,6 +403,12 @@ impl fmt::Display for BinaryOperator {
             BinaryOperator::QuestionDoublePipe => f.write_str("?||"),
             BinaryOperator::At => f.write_str("@"),
             BinaryOperator::TildeEq => f.write_str("~="),
+            BinaryOperator::MatchAll => f.write_str("MATCH_ALL"),
+            BinaryOperator::MatchAny => f.write_str("MATCH_ANY"),
+            BinaryOperator::MatchPhrase => f.write_str("MATCH_PHRASE"),
+            BinaryOperator::MatchPhrasePrefix => f.write_str("MATCH_PHRASE_PREFIX"),
+            BinaryOperator::MatchRegexp => f.write_str("MATCH_REGEXP"),
+            BinaryOperator::MatchPhraseEdge => f.write_str("MATCH_PHRASE_EDGE"),
         }
     }
 }

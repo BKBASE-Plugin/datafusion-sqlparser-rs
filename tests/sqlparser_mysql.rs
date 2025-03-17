@@ -3418,3 +3418,24 @@ fn parse_cast_integers() {
         .run_parser_method("CAST(foo AS UNSIGNED INTEGER(3))", |p| p.parse_expr())
         .expect_err("CAST doesn't allow display width");
 }
+
+#[test]
+fn parse_extend_match_operator() {
+    mysql().verified_expr("foo LIKE 'apple' OR foo MATCH_ALL 'bar'");
+    mysql().verified_expr("foo LIKE 'apple' OR foo MATCH_ALL 'bar' OR foo LIKE 'cherry'");
+    mysql().verified_expr("foo MATCH_ALL 'bar' OR foo LIKE 'apple' OR foo LIKE 'cherry'");
+    mysql().verified_expr("foo MATCH_ALL 'bar' OR foo LIKE 'apple' OR foo MATCH_ALL 'cherry'");
+    mysql().verified_expr("foo MATCH_ALL 'bar' OR foo MATCH_ALL 'apple' OR foo MATCH_ALL 'cherry'");
+
+    mysql().verified_stmt("SELECT * FROM table_name WHERE foo MATCH_ALL 'bar'");
+    mysql().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' AND foo MATCH_ALL 'apple'",
+    );
+    mysql().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' OR foo MATCH_ALL 'apple'",
+    );
+    mysql().verified_stmt("SELECT * FROM table_name WHERE foo LIKE 'apple' OR foo MATCH_ALL 'bar'");
+    mysql().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' AND foo MATCH_ALL 'apple' OR a BETWEEN 1 AND 2",
+    );
+}
