@@ -580,6 +580,14 @@ pub trait Dialect: Debug + Any {
             Token::Word(w) if w.keyword == Keyword::RLIKE => Ok(p!(Like)),
             Token::Word(w) if w.keyword == Keyword::REGEXP => Ok(p!(Like)),
             Token::Word(w) if w.keyword == Keyword::SIMILAR => Ok(p!(Like)),
+            // Define Doris Match_* Operators: the same as LIKE precedence
+            Token::Word(w) if w.keyword == Keyword::MATCH_ALL => Ok(p!(Like)),
+            Token::Word(w) if w.keyword == Keyword::MATCH_ANY => Ok(p!(Like)),
+            Token::Word(w) if w.keyword == Keyword::MATCH_PHRASE => Ok(p!(Like)),
+            Token::Word(w) if w.keyword == Keyword::MATCH_PHRASE_PREFIX => Ok(p!(Like)),
+            Token::Word(w) if w.keyword == Keyword::MATCH_REGEXP => Ok(p!(Like)),
+            Token::Word(w) if w.keyword == Keyword::MATCH_PHRASE_EDGE => Ok(p!(Like)),
+            // End Doris Match_* Operators
             Token::Word(w) if w.keyword == Keyword::OPERATOR => Ok(p!(Between)),
             Token::Word(w) if w.keyword == Keyword::DIV => Ok(p!(MulDivModOp)),
             Token::Period => Ok(p!(Period)),

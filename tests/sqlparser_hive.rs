@@ -563,3 +563,24 @@ fn hive() -> TestedDialects {
 fn hive_and_generic() -> TestedDialects {
     TestedDialects::new(vec![Box::new(HiveDialect {}), Box::new(GenericDialect {})])
 }
+
+#[test]
+fn parse_extend_match_operator() {
+    hive().verified_expr("foo LIKE 'apple' OR foo MATCH_ALL 'bar'");
+    hive().verified_expr("foo LIKE 'apple' OR foo MATCH_ALL 'bar' OR foo LIKE 'cherry'");
+    hive().verified_expr("foo MATCH_ALL 'bar' OR foo LIKE 'apple' OR foo LIKE 'cherry'");
+    hive().verified_expr("foo MATCH_ALL 'bar' OR foo LIKE 'apple' OR foo MATCH_ALL 'cherry'");
+    hive().verified_expr("foo MATCH_ALL 'bar' OR foo MATCH_ALL 'apple' OR foo MATCH_ALL 'cherry'");
+
+    hive().verified_stmt("SELECT * FROM table_name WHERE foo MATCH_ALL 'bar'");
+    hive().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' AND foo MATCH_ALL 'apple'",
+    );
+    hive().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' OR foo MATCH_ALL 'apple'",
+    );
+    hive().verified_stmt("SELECT * FROM table_name WHERE foo LIKE 'apple' OR foo MATCH_ALL 'bar'");
+    hive().verified_stmt(
+        "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' AND foo MATCH_ALL 'apple' OR a BETWEEN 1 AND 2",
+    );
+}
