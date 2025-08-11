@@ -71,4 +71,9 @@ impl Dialect for HiveDialect {
     fn supports_group_by_with_modifier(&self) -> bool {
         true
     }
+
+    /// Does the dialect support parsing `LIMIT 1, 2` as `LIMIT 2 OFFSET 1`?
+    fn supports_limit_comma(&self) -> bool {
+        true
+    }
 }
