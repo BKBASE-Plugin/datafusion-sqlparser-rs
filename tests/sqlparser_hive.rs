@@ -548,6 +548,13 @@ fn parse_use() {
 }
 
 #[test]
+fn hive_limit_offset() {
+    let sql = "SELECT * FROM foo LIMIT 100, 200";
+    let expected = "SELECT * FROM foo LIMIT 200 OFFSET 100";
+    println!("{}", hive().one_statement_parses_to(sql, expected));
+}
+
+#[test]
 fn test_tample_sample() {
     hive().verified_stmt("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 32 ON rand()) AS s");
     hive().verified_stmt("SELECT * FROM source TABLESAMPLE (BUCKET 3 OUT OF 16 ON id)");
