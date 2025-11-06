@@ -591,3 +591,11 @@ fn parse_extend_match_operator() {
         "SELECT * FROM table_name WHERE foo MATCH_ALL 'bar' AND foo MATCH_ALL 'apple' OR a BETWEEN 1 AND 2",
     );
 }
+
+#[test]
+fn parse_special_ident() {
+    hive().verified_stmt("SELECT ____et FROM tab");
+    hive().verified_stmt("SELECT `____et` FROM tab");
+    hive().verified_stmt("SELECT _iam_ FROM tab");
+    hive().verified_stmt("SELECT `_iam_` FROM tab");
+}
