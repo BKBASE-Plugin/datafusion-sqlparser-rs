@@ -59,7 +59,7 @@ pub use self::ddl::{
     UserDefinedTypeRepresentation, ViewColumnDef,
 };
 pub use self::dml::{CreateIndex, CreateTable, Delete, Insert};
-pub use self::operator::{BinaryOperator, UnaryOperator};
+pub use self::operator::{BinaryOperator, MatchOperator, UnaryOperator};
 pub use self::query::{
     AfterMatchSkip, ConnectBy, Cte, CteAsMaterialized, Distinct, EmptyMatchesMode,
     ExceptSelectItem, ExcludeSelectItem, ExprWithAlias, Fetch, ForClause, ForJson, ForXml,
@@ -771,6 +771,14 @@ pub enum Expr {
         // true for REGEXP, false for RLIKE (no difference in semantics)
         regexp: bool,
     },
+    /// Doris: `<expr> [NOT] MATCH_* <pattern>`
+    Match {
+        negated: bool,
+        expr: Box<Expr>,
+        operator: MatchOperator,
+        use_match_alias: bool,
+        pattern: Box<Expr>,
+    },
     /// `ANY` operation e.g. `foo > ANY(bar)`, comparison operator is one of `[=, >, <, =>, =<, !=]`
     /// <https://docs.snowflake.com/en/sql-reference/operators-subquery#all-any>
     AnyOp {
@@ -1467,6 +1475,27 @@ impl fmt::Display for Expr {
                 if *regexp { "REGEXP" } else { "RLIKE" },
                 pattern
             ),
+            Expr::Match {
+                negated,
+                expr,
+                operator,
+                use_match_alias,
+                pattern,
+            } => {
+                write!(
+                    f,
+                    "{} {}{} {}",
+                    expr,
+                    if *negated { "NOT " } else { "" },
+                    if *use_match_alias && *operator == MatchOperator::MatchAny {
+                        "MATCH".to_string()
+                    } else {
+                        operator.to_string()
+                    },
+                    pattern
+                )?;
+                Ok(())
+            }
             Expr::IsNormalized {
                 expr,
                 form,

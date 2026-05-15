@@ -92,6 +92,32 @@ impl fmt::Display for UnaryOperator {
     }
 }
 
+/// Doris MATCH operators
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum MatchOperator {
+    MatchAll,
+    MatchAny,
+    MatchPhrase,
+    MatchPhrasePrefix,
+    MatchRegexp,
+    MatchPhraseEdge,
+}
+
+impl fmt::Display for MatchOperator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match self {
+            MatchOperator::MatchAll => "MATCH_ALL",
+            MatchOperator::MatchAny => "MATCH_ANY",
+            MatchOperator::MatchPhrase => "MATCH_PHRASE",
+            MatchOperator::MatchPhrasePrefix => "MATCH_PHRASE_PREFIX",
+            MatchOperator::MatchRegexp => "MATCH_REGEXP",
+            MatchOperator::MatchPhraseEdge => "MATCH_PHRASE_EDGE",
+        })
+    }
+}
+
 /// Binary operators
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -321,15 +347,6 @@ pub enum BinaryOperator {
     /// `~=` Same as? (PostgreSQL/Redshift geometric operator)
     /// See <https://www.postgresql.org/docs/9.5/functions-geometry.html>
     TildeEq,
-    /// Doris Match operator
-    /// See <https://doris.apache.org/zh-cn/docs/develop/sql-reference/operators/match/>
-    /// e.g. `a MATCH_* 'keyword1_xxxxxxx'`
-    MatchAll,
-    MatchAny,
-    MatchPhrase,
-    MatchPhrasePrefix,
-    MatchRegexp,
-    MatchPhraseEdge,
 }
 
 impl fmt::Display for BinaryOperator {
@@ -403,12 +420,6 @@ impl fmt::Display for BinaryOperator {
             BinaryOperator::QuestionDoublePipe => f.write_str("?||"),
             BinaryOperator::At => f.write_str("@"),
             BinaryOperator::TildeEq => f.write_str("~="),
-            BinaryOperator::MatchAll => f.write_str("MATCH_ALL"),
-            BinaryOperator::MatchAny => f.write_str("MATCH_ANY"),
-            BinaryOperator::MatchPhrase => f.write_str("MATCH_PHRASE"),
-            BinaryOperator::MatchPhrasePrefix => f.write_str("MATCH_PHRASE_PREFIX"),
-            BinaryOperator::MatchRegexp => f.write_str("MATCH_REGEXP"),
-            BinaryOperator::MatchPhraseEdge => f.write_str("MATCH_PHRASE_EDGE"),
         }
     }
 }

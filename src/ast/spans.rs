@@ -1345,6 +1345,13 @@ impl Spanned for Expr {
                 any: _,
             } => expr.span().union(&pattern.span()),
             Expr::RLike { .. } => Span::empty(),
+            Expr::Match {
+                negated: _,
+                expr,
+                operator: _,
+                use_match_alias: _,
+                pattern,
+            } => expr.span().union(&pattern.span()),
             Expr::IsNormalized {
                 expr,
                 form: _,
