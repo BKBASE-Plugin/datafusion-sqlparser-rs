@@ -3227,21 +3227,6 @@ impl<'a> Parser<'a> {
                     self.expect_token(&Token::RParen)?;
                     Some(BinaryOperator::PGCustomBinaryOperator(idents))
                 }
-                // Doris match operators
-                Keyword::MATCH_ALL => dialect_is!(dialect is HiveDialect | GenericDialect)
-                    .then_some(BinaryOperator::MatchAll),
-                Keyword::MATCH_ANY => dialect_is!(dialect is HiveDialect | GenericDialect)
-                    .then_some(BinaryOperator::MatchAny),
-                Keyword::MATCH_PHRASE => dialect_is!(dialect is HiveDialect | GenericDialect)
-                    .then_some(BinaryOperator::MatchPhrase),
-                Keyword::MATCH_PHRASE_PREFIX => {
-                    dialect_is!(dialect is HiveDialect | GenericDialect)
-                        .then_some(BinaryOperator::MatchPhrasePrefix)
-                }
-                Keyword::MATCH_PHRASE_EDGE => dialect_is!(dialect is HiveDialect | GenericDialect)
-                    .then_some(BinaryOperator::MatchPhraseEdge),
-                Keyword::MATCH_REGEXP => dialect_is!(dialect is HiveDialect | GenericDialect)
-                    .then_some(BinaryOperator::MatchRegexp),
                 _ => None,
             },
             _ => None,
@@ -3352,7 +3337,14 @@ impl<'a> Parser<'a> {
                 | Keyword::ILIKE
                 | Keyword::SIMILAR
                 | Keyword::REGEXP
-                | Keyword::RLIKE => {
+                | Keyword::RLIKE
+                | Keyword::MATCH
+                | Keyword::MATCH_ALL
+                | Keyword::MATCH_ANY
+                | Keyword::MATCH_PHRASE
+                | Keyword::MATCH_PHRASE_PREFIX
+                | Keyword::MATCH_REGEXP
+                | Keyword::MATCH_PHRASE_EDGE => {
                     self.prev_token();
                     let negated = self.parse_keyword(Keyword::NOT);
                     let regexp = self.parse_keyword(Keyword::REGEXP);
@@ -3399,8 +3391,25 @@ impl<'a> Parser<'a> {
                             ),
                             escape_char: self.parse_escape_char()?,
                         })
+                    } else if dialect_of!(self is HiveDialect | GenericDialect) {
+                        if let Some((operator, use_match_alias)) = self.parse_match_operator() {
+                            Ok(Expr::Match {
+                                negated,
+                                expr: Box::new(expr),
+                                operator,
+                                use_match_alias,
+                                pattern: Box::new(
+                                    self.parse_subexpr(self.dialect.prec_value(Precedence::Like))?,
+                                ),
+                            })
+                        } else {
+                            self.expected(
+                                "IN, BETWEEN, LIKE, or MATCH_* after NOT",
+                                self.peek_token(),
+                            )
+                        }
                     } else {
-                        self.expected("IN or BETWEEN after NOT", self.peek_token())
+                        self.expected("IN, BETWEEN, LIKE, or MATCH_* after NOT", self.peek_token())
                     }
                 }
                 // Can only happen if `get_next_precedence` got out of sync with this function
@@ -3441,6 +3450,26 @@ impl<'a> Parser<'a> {
             Ok(Some(self.parse_literal_string()?))
         } else {
             Ok(None)
+        }
+    }
+
+    fn parse_match_operator(&mut self) -> Option<(MatchOperator, bool)> {
+        if self.parse_keyword(Keyword::MATCH) {
+            Some((MatchOperator::MatchAny, true))
+        } else if self.parse_keyword(Keyword::MATCH_ANY) {
+            Some((MatchOperator::MatchAny, false))
+        } else if self.parse_keyword(Keyword::MATCH_ALL) {
+            Some((MatchOperator::MatchAll, false))
+        } else if self.parse_keyword(Keyword::MATCH_PHRASE) {
+            Some((MatchOperator::MatchPhrase, false))
+        } else if self.parse_keyword(Keyword::MATCH_PHRASE_PREFIX) {
+            Some((MatchOperator::MatchPhrasePrefix, false))
+        } else if self.parse_keyword(Keyword::MATCH_REGEXP) {
+            Some((MatchOperator::MatchRegexp, false))
+        } else if self.parse_keyword(Keyword::MATCH_PHRASE_EDGE) {
+            Some((MatchOperator::MatchPhraseEdge, false))
+        } else {
+            None
         }
     }
 
@@ -15447,6 +15476,8 @@ mod tests {
         let test_cases = [
             // 1.1
             "SELECT * FROM table_name WHERE content MATCH_ANY 'keyword1';",
+            "SELECT * FROM table_name WHERE content MATCH 'keyword1';",
+            "SELECT * FROM table_name WHERE title MATCH 'quick brown fox';",
             // 1.2
             "SELECT * FROM table_name WHERE content MATCH_ANY 'keyword1 keyword2';",
             // 1.3
@@ -15462,10 +15493,168 @@ mod tests {
             "SELECT * FROM table_name WHERE content MATCH_PHRASE_PREFIX 'keyword1';",
             // 2.5
             "SELECT * FROM table_name WHERE content MATCH_REGEXP 'key*';",
+            // 2.6
+            "SELECT * FROM table_name WHERE content NOT MATCH_PHRASE 'keyword1 keyword2';",
+            "SELECT * FROM table_name WHERE content NOT MATCH_ALL 'keyword1 keyword2';",
+            "SELECT * FROM table_name WHERE content NOT MATCH_ANY 'keyword1 keyword2';",
+            "SELECT * FROM table_name WHERE content NOT MATCH_PHRASE_PREFIX 'keyword1';",
+            "SELECT * FROM table_name WHERE content NOT MATCH_PHRASE_EDGE 'keyword1';",
+            "SELECT * FROM table_name WHERE content NOT MATCH_REGEXP 'key*';",
+            "SELECT * FROM table_name WHERE content NOT MATCH 'keyword1';",
+            "SELECT * FROM table_name WHERE content MATCH 'hello' AND author = 'smith';",
+            "SELECT * FROM table_name WHERE category = 'news' OR content MATCH 'breaking update';",
+            "SELECT * FROM table_name WHERE (title MATCH 'database') AND (content MATCH_PHRASE 'query engine');",
         ];
 
         for sql in test_cases {
             assert!(Parser::parse_sql(dialect, sql).is_ok());
+        }
+    }
+
+    #[test]
+    fn test_doris_not_match_operators_roundtrip() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content NOT MATCH_PHRASE 'keyword1 keyword2'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        assert_eq!(statements[0].to_string(), sql);
+    }
+
+    #[test]
+    fn test_doris_match_alias_roundtrip() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content MATCH 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        assert_eq!(statements[0].to_string(), sql);
+    }
+
+    #[test]
+    fn test_doris_not_match_alias_roundtrip() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content NOT MATCH 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        assert_eq!(statements[0].to_string(), sql);
+    }
+
+    #[test]
+    fn test_doris_match_any_roundtrip() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content MATCH_ANY 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        assert_eq!(statements[0].to_string(), sql);
+    }
+
+    #[test]
+    fn test_doris_not_match_any_roundtrip() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content NOT MATCH_ANY 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        assert_eq!(statements[0].to_string(), sql);
+    }
+
+    #[test]
+    fn test_doris_match_operator_ast_shape() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content NOT MATCH_PHRASE 'keyword1 keyword2'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        let crate::ast::Statement::Query(query) = &statements[0] else {
+            panic!("expected query");
+        };
+        let crate::ast::SetExpr::Select(select) = &*query.body else {
+            panic!("expected select");
+        };
+        let Some(selection) = &select.selection else {
+            panic!("expected where selection");
+        };
+
+        match selection {
+            crate::ast::Expr::Match {
+                negated,
+                operator,
+                use_match_alias,
+                expr,
+                pattern,
+            } => {
+                assert!(*negated);
+                assert_eq!(*operator, crate::ast::MatchOperator::MatchPhrase);
+                assert!(!use_match_alias);
+                assert_eq!(expr.to_string(), "content");
+                assert_eq!(pattern.to_string(), "'keyword1 keyword2'");
+            }
+            _ => panic!("expected Expr::Match"),
+        }
+    }
+
+    #[test]
+    fn test_doris_match_alias_ast_shape() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content MATCH 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        let crate::ast::Statement::Query(query) = &statements[0] else {
+            panic!("expected query");
+        };
+        let crate::ast::SetExpr::Select(select) = &*query.body else {
+            panic!("expected select");
+        };
+        let Some(selection) = &select.selection else {
+            panic!("expected where selection");
+        };
+
+        match selection {
+            crate::ast::Expr::Match {
+                negated,
+                operator,
+                use_match_alias,
+                expr,
+                pattern,
+            } => {
+                assert!(!negated);
+                assert_eq!(*operator, crate::ast::MatchOperator::MatchAny);
+                assert!(*use_match_alias);
+                assert_eq!(expr.to_string(), "content");
+                assert_eq!(pattern.to_string(), "'hello'");
+            }
+            _ => panic!("expected Expr::Match"),
+        }
+    }
+
+    #[test]
+    fn test_doris_match_any_ast_shape() {
+        let dialect = &HiveDialect {};
+        let sql = "SELECT * FROM table_name WHERE content MATCH_ANY 'hello'";
+        let statements = Parser::parse_sql(dialect, sql).unwrap();
+
+        let crate::ast::Statement::Query(query) = &statements[0] else {
+            panic!("expected query");
+        };
+        let crate::ast::SetExpr::Select(select) = &*query.body else {
+            panic!("expected select");
+        };
+        let Some(selection) = &select.selection else {
+            panic!("expected where selection");
+        };
+
+        match selection {
+            crate::ast::Expr::Match {
+                negated,
+                operator,
+                use_match_alias,
+                expr,
+                pattern,
+            } => {
+                assert!(!negated);
+                assert_eq!(*operator, crate::ast::MatchOperator::MatchAny);
+                assert!(!use_match_alias);
+                assert_eq!(expr.to_string(), "content");
+                assert_eq!(pattern.to_string(), "'hello'");
+            }
+            _ => panic!("expected Expr::Match"),
         }
     }
 
