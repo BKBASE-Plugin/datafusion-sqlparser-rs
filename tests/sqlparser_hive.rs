@@ -31,6 +31,50 @@ use sqlparser::parser::ParserError;
 use sqlparser::test_utils::*;
 
 #[test]
+fn hive_unnest_table_factor() {
+    let select = hive().verified_only_select("SELECT * FROM UNNEST(arr)");
+    assert!(matches!(
+        &select.from[0].relation,
+        TableFactor::UNNEST { array_exprs, alias: None, with_ordinality: false, .. }
+            if array_exprs.len() == 1
+    ));
+
+    let select = hive()
+        .verified_only_select("SELECT * FROM demo CROSS JOIN UNNEST(split(arr, '|')) AS u (item)");
+    assert!(matches!(
+        &select.from[0].joins[0].relation,
+        TableFactor::UNNEST { alias: Some(alias), array_exprs, .. }
+            if alias.name.value == "u" && alias.columns.len() == 1 && array_exprs.len() == 1
+    ));
+}
+
+#[test]
+fn hive_unnest_with_ordinality() {
+    let select = hive()
+        .verified_only_select("SELECT * FROM UNNEST(arr1, arr2) WITH ORDINALITY AS u (a, b, n)");
+    assert!(matches!(
+        &select.from[0].relation,
+        TableFactor::UNNEST { array_exprs, alias: Some(alias), with_ordinality: true, .. }
+            if array_exprs.len() == 2 && alias.columns.len() == 3
+    ));
+}
+
+#[test]
+fn hive_unnest_quoted_table_name() {
+    for sql in [
+        "SELECT * FROM `UNNEST`",
+        "SELECT * FROM demo.`UNNEST`",
+        "SELECT * FROM `UNNEST`(arr)",
+    ] {
+        let select = hive().verified_only_select(sql);
+        assert!(matches!(
+            &select.from[0].relation,
+            TableFactor::Table { .. }
+        ));
+    }
+}
+
+#[test]
 fn parse_table_create() {
     let sql = r#"CREATE TABLE IF NOT EXISTS db.table (a BIGINT, b STRING, c TIMESTAMP) PARTITIONED BY (d STRING, e TIMESTAMP) STORED AS ORC LOCATION 's3://...' TBLPROPERTIES ("prop" = "2", "asdf" = '1234', 'asdf' = "1234", "asdf" = 2)"#;
     let iof = r#"CREATE TABLE IF NOT EXISTS db.table (a BIGINT, b STRING, c TIMESTAMP) PARTITIONED BY (d STRING, e TIMESTAMP) STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.orc.OrcInputFormat' OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat' LOCATION 's3://...'"#;

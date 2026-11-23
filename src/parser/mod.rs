@@ -11708,7 +11708,7 @@ impl<'a> Parser<'a> {
                 }),
                 alias,
             })
-        } else if dialect_of!(self is BigQueryDialect | PostgreSqlDialect | GenericDialect)
+        } else if dialect_of!(self is BigQueryDialect | PostgreSqlDialect | GenericDialect | HiveDialect)
             && self.parse_keyword(Keyword::UNNEST)
         {
             self.expect_token(&Token::LParen)?;
