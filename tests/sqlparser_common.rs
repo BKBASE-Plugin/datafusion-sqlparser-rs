@@ -7474,6 +7474,48 @@ fn parse_values() {
 }
 
 #[test]
+fn parse_values_single_column_expressions() {
+    for (sql, canonical) in [
+        ("VALUES 1, 2", "VALUES (1), (2)"),
+        ("VALUES NULL, -2, +3", "VALUES (NULL), (-2), (+3)"),
+        ("VALUES 'a,b', 'c'", "VALUES ('a,b'), ('c')"),
+        (
+            "VALUES COALESCE(NULL, 1), 2",
+            "VALUES (COALESCE(NULL, 1)), (2)",
+        ),
+        ("VALUES (1 + 2) * 3, 4", "VALUES ((1 + 2) * 3), (4)"),
+        ("VALUES 1, (2), 3 + 4", "VALUES (1), (2), (3 + 4)"),
+        (
+            "VALUES 1, 2 UNION ALL VALUES 3",
+            "VALUES (1), (2) UNION ALL VALUES (3)",
+        ),
+        (
+            "SELECT * FROM (VALUES 1, 2) AS k (n)",
+            "SELECT * FROM (VALUES (1), (2)) AS k (n)",
+        ),
+        (
+            "WITH k AS (VALUES 1, 2) SELECT * FROM k",
+            "WITH k AS (VALUES (1), (2)) SELECT * FROM k",
+        ),
+    ] {
+        one_statement_parses_to(sql, canonical);
+    }
+}
+
+#[test]
+fn parse_values_invalid_rows() {
+    for sql in [
+        "VALUES",
+        "VALUES 1,, 2",
+        "VALUES 1,",
+        "VALUES ROW 1",
+        "VALUES (1, 2",
+    ] {
+        assert!(Parser::parse_sql(&GenericDialect {}, sql).is_err(), "{sql}");
+    }
+}
+
+#[test]
 fn parse_multiple_statements() {
     fn test_with(sql1: &str, sql2_kw: &str, sql2_rest: &str) {
         // Check that a string consisting of two statements delimited by a semicolon
