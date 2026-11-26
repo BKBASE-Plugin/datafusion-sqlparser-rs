@@ -13873,8 +13873,19 @@ impl<'a> Parser<'a> {
         let mut explicit_row = false;
 
         let rows = self.parse_comma_separated(|parser| {
-            if parser.parse_keyword(Keyword::ROW) {
+            let has_row_keyword = parser.parse_keyword(Keyword::ROW);
+            if has_row_keyword {
                 explicit_row = true;
+            }
+
+            let empty_row = allow_empty && parser.peek_tokens() == [Token::LParen, Token::RParen];
+            if !has_row_keyword && !empty_row {
+                // 复用表达式解析，保留函数参数及括号表达式中的逗号边界。
+                return parser.parse_expr().map(|expr| match expr {
+                    Expr::Tuple(exprs) => exprs,
+                    Expr::Nested(expr) => vec![*expr],
+                    expr => vec![expr],
+                });
             }
 
             parser.expect_token(&Token::LParen)?;
